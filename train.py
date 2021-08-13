@@ -97,7 +97,7 @@ def evaluate_accuracy(data_iter, net, ctx):
 
 def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='./', checkpoints_dir='./checkpoints'):
     """Train model and genereate checkpoints"""
-    print('Training network  : %d' % (num_epochs))
+    # print('Training network  : %d' % (num_epochs))
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
 
@@ -109,8 +109,8 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
     lr_steps = sorted([float(ls)
                        for ls in args.lr_decay_epoch.split(',') if ls.strip()])
 
-    log.warning("Checkpoints : %s" % (checkpoints_dir))
-    log.info("lr_steps : {}".format(lr_steps))
+    # log.warning("Checkpoints : %s" % (checkpoints_dir))
+    # log.info("lr_steps : {}".format(lr_steps))
     # define a summary writer that logs data and flushes to the file every 5 seconds
     sw = SummaryWriter(logdir='./logs', flush_secs=5)
 
@@ -139,7 +139,7 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
 
         for i, batch in enumerate(tqdm(train_iter)):
             # if i % 0 == 0:
-            print("Batch Index : %d" % (i))
+            # print("Batch Index : %d" % (i))
             # get data and their associated labels
             data, label, batch_size = _get_batch(batch, ctx)
             Ls = []
@@ -153,12 +153,12 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
                     outputs.append(z)
                 autograd.backward(Ls)
 
-            print(Ls)
+            # print(Ls)
             trainer.step(batch_size)
             metric.update(label, outputs)
 
             pixAcc, mIoU = metric.get()
-            print('[Epoch Snap %d] training: pixAcc=%f, mIoU=%f'%(epoch, pixAcc, mIoU))
+            # print('[Epoch Snap %d] training: pixAcc=%f, mIoU=%f'%(epoch, pixAcc, mIoU))
 
             train_l_sum += sum([l.sum().asscalar() for l in Ls])
             n += sum([l.size for l in Ls])
@@ -172,14 +172,14 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
         speed = batch_size / (time.time() - btic)
         epoch_time = time.time() - start
         pixAcc, mIoU = metric.get()
-        print('[Epoch %d] training: pixAcc=%f, mIoU=%f'%(epoch, pixAcc, mIoU))
+        # print('[Epoch %d] training: pixAcc=%f, mIoU=%f'%(epoch, pixAcc, mIoU))
 
         sw.add_scalar(tag='miou', value=('pixAcc', pixAcc), global_step=epoch)
         sw.add_scalar(tag='miou', value=('mIoU', mIoU), global_step=epoch)
 
         test_acc = evaluate_accuracy(test_iter, net, ctx)
-        print('epoch %d, loss %.5f, train acc %.5f, test acc %.5f, time %.5f sec'
-              % (epoch + 1, train_l_sum / n, train_acc_sum / m, test_acc, epoch_time))
+        # print('epoch %d, loss %.5f, train acc %.5f, test acc %.5f, time %.5f sec'
+        #       % (epoch + 1, train_l_sum / n, train_acc_sum / m, test_acc, epoch_time))
 
         sw.add_scalar(tag='loss', value=(train_l_sum / n), global_step=epoch)
         # logging training/validation/test accuracy
@@ -213,19 +213,19 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
         if val_acc > best_acc:
             best_acc = val_acc
             if best_epoch != -1:
-                print('Deleting previous checkpoint...')
+                # print('Deleting previous checkpoint...')
                 fname = os.path.join(
                     'checkpoints', '%s-%d.params' % (prefix, best_epoch))
                 if os.path.isfile(fname):
                     os.remove(fname)
 
             best_epoch = epoch
-            print('Best validation accuracy found. Checkpointing...')
+            # print('Best validation accuracy found. Checkpointing...')
             fname = os.path.join('checkpoints', '%s-%d-%f.params' %
                                  (prefix, best_epoch, val_acc))
             net.save_parameters(fname)
-            log.info(
-                '[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, val_acc)
+            # log.info(
+            #     '[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, val_acc)
 
             net.save_parameters(
                 '{:s}_best.params'.format(prefix, epoch, val_acc))
@@ -363,7 +363,7 @@ if __name__ == '__main__':
     # epoch 200, loss 0.26075, train acc 0.88482, test acc 0.87221, time 1.15931 sec
 
     # Hyperparameters
-    print(args)
+    # print(args)
     batch_size = args.batch_size
     num_workers = multiprocessing.cpu_count() // 2
     # python ./segmenter.py --checkpoint=load --checkpoint-file ./unet_best.params
@@ -379,7 +379,7 @@ if __name__ == '__main__':
         net.load_parameters(args.checkpoint_file, ctx=ctx)
 
       # net.initialize(ctx=ctx)
-    print(net)
+    # print(net)
     # net.summary(nd.ones((1, 3, 512, 512)))  # NCHW (N:batch_size, C:channel, H:height, W:width)
 
     # https://mxnet.apache.org/versions/1.6/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html

@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 class SegDataset(gdata.Dataset):
     def __init__(self, root, transform = None, colormap = None, classes=None):
-       print ("Numpy Version : %s " %(np.__version__))
+       # print ("Numpy Version : %s " %(np.__version__))
        features, labels = self.read_images(root)
        # Bitonal 
     #    self.rgb_mean = nd.array([0.92531412, 0.92531412, 0.92531412])
@@ -35,7 +35,7 @@ class SegDataset(gdata.Dataset):
        self.colormap = colormap
        self.classes = classes
        self.colormap2label = None
-       print('Transforming complete')
+       # print('Transforming complete')
 
     def normalize_image(self, img):
         return (img.astype('float32') / 255.0 - self.rgb_mean) / self.rgb_std
@@ -57,7 +57,7 @@ class SegDataset(gdata.Dataset):
             labels[i] = image.imread(os.path.join(mask_dir, fname))
             # features[i] = cv2.imread(os.path.join(img_dir, fname))
             # labels[i] = cv2.imread(os.path.join(mask_dir, fname))
-        print('read_images complete')
+        # print('read_images complete')
         return features, labels
 
     def label_indices(self, img):  
