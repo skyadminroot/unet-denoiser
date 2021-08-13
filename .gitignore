@@ -134,3 +134,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+pdf2image/
+handwrite_data/
+handwrite_data_background/
+pdf/
+.idea/
