@@ -6,6 +6,7 @@ import time
 import cv2
 import numpy
 import numpy as np
+from numba import jit
 from tqdm import tqdm
 
 
@@ -81,64 +82,60 @@ def overlayImage(bgp, mask_image):
     width = mask_image.shape[1]
     height = mask_image.shape[0]
 
-    start_x = 0
+    offset_x = 0
     if bgp.shape[1] - width - 1 > 0:
-        start_x = numpy.random.randint(low=0, high=bgp.shape[1] - width - 1, size=1)[0]
+        offset_x = numpy.random.randint(low=0, high=bgp.shape[1] - width - 1, size=1)[0]
 
-    start_y = 0
+    offset_y = 0
     if bgp.shape[0] - height - 1 > 0:
-        start_y = numpy.random.randint(low=0, high=bgp.shape[0] - height - 1, size=1)[0]
+        offset_y = numpy.random.randint(low=0, high=bgp.shape[0] - height - 1, size=1)[0]
 
+    simpleOverlayImage(bgp, mask_image, offset_x, offset_y, width, height, True)
+    return offset_x, offset_y, width, height
+
+
+@jit
+def simpleOverlayImage(bg_image, mask_image, offset_x, offset_y, width, height, ignore_white):
     for x in range(width):
         for y in range(height):
-            if mask_image[y, x] != 255:
-                try:
-                    bgp[start_y + y, start_x + x] = mask_image[y, x]
-                except Exception as error:
-                    print(error)
-
-    return start_x, start_y, width, height
+            if ignore_white and mask_image[y, x] == 255:
+                continue
+            bg_image[offset_y + y, offset_x + x] = mask_image[y, x]
 
 
-def copy_handwrite_images(bg_image, all_img_list, files, dest_mask_dir, dest_image_dir, progress_bar):
+def copy_handwrite_images(bg_image, all_img_list, dest_mask_dir, dest_image_dir, progress_bar):
     global mImageCount
     bg = cv2.imread(bg_image, cv2.IMREAD_GRAYSCALE)
-    for idx, val in enumerate(files):
-        mImageCount += 1
-        dest_mask_name = os.path.join(dest_mask_dir, str(mImageCount) + ".png")
-        dest_image_name = os.path.join(dest_image_dir, str(mImageCount) + ".png")
 
-        # 合成多个遮盖图片
-        sample_size = int(len(files) * 0.8)
-        if sample_size > 10:
-            sample_size = 10
-        random_image = random.sample(all_img_list, sample_size)
-        mask_image = np.ones(bg.shape, bg.dtype) * 255
-        for imgUrl in random_image:
-            img = cv2.imread(imgUrl, cv2.IMREAD_GRAYSCALE)
-            img = rotate_bound(img, random.randint(-180, 180), random.uniform(0.3, 0.6))
-            overlayImage(mask_image, img)
+    mImageCount += 1
+    dest_mask_path = os.path.join(dest_mask_dir, str(mImageCount) + ".png")
+    dest_image_path = os.path.join(dest_image_dir, str(mImageCount) + ".png")
 
-        bgp = bg.copy()
-        start_x, start_y, width, height = overlayImage(bgp, mask_image)
-        imWrite(dest_image_name, bgp)
+    # 合成多个遮盖图片
+    random_image = random.sample(all_img_list, 2)
+    mask_image = np.ones(bg.shape, bg.dtype) * 255
+    for imgUrl in random_image:
+        img = cv2.imread(imgUrl, cv2.IMREAD_GRAYSCALE)
+        rotate_image = rotate_bound(img, random.randint(-15, 15), random.uniform(0.3, 0.6))
+        overlayImage(mask_image, rotate_image)
 
-        # resize mask_image
-        # 此时mask_image尺寸必然小于bgp
-        w = bgp.shape[1]
-        h = bgp.shape[0]
-        target_mask = np.ones((h, w), dtype=np.uint8) * 0
-        tmp_mask_image = cv2.threshold(mask_image, 128, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-        for x in range(width):
-            for y in range(height):
-                try:
-                    target_mask[start_y + y, start_x + x] = tmp_mask_image[y, x]
-                except Exception as error:
-                    print(error)
-                pass
-        imWrite(dest_mask_name, target_mask)
-        if progress_bar is not None:
-            progress_bar.update(1)
+    bg_copy = bg.copy()
+    start_x, start_y, width, height = overlayImage(bg_copy, mask_image)
+    imWrite(dest_image_path, bg_copy)
+
+    # resize mask_image
+    # 此时mask_image尺寸必然小于bgp
+    w = bg_copy.shape[1]
+    h = bg_copy.shape[0]
+
+    # 取全黑背景图
+    target_mask = np.ones((h, w), dtype=np.uint8) * 0
+    tmp_mask_image = cv2.threshold(mask_image, 128, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+
+    simpleOverlayImage(target_mask, tmp_mask_image, start_x, start_y, width, height, False)
+    imWrite(dest_mask_path, target_mask)
+    if progress_bar is not None:
+        progress_bar.update(1)
 
 
 mImageCount = 0
@@ -213,27 +210,25 @@ def generate_data(bg_dir, img_dir, random_mask_size):
     img_file_list = readAllImageFiles(img_dir)
 
     # 测试用数据集
-    test_bg_file_list = bg_file_list[0:5]
+    test_bg_file_list = bg_file_list[0:40]
     # 训练用数据集
-    train_bg_file_list = bg_file_list[5: 40]
+    train_bg_file_list = bg_file_list[40:]
 
     if len(bg_file_list) == 0 or len(img_file_list) == 0:
         print("miss resource file")
         return
     # 将M个背景图片映射到N个手写图片
     # 构建测试数据集
-    with tqdm(total=len(test_bg_file_list) * random_mask_size) as progress_bar:
-        for bgFile in test_bg_file_list:
-            random.seed(time.time())
-            img_slice = random.sample(img_file_list, random_mask_size)
-            copy_handwrite_images(bgFile, img_file_list, img_slice, test_mask_dir, test_image_dir, progress_bar)
+    with tqdm(total=len(test_bg_file_list)) as progress_bar:
+        for bg_image in test_bg_file_list:
+            copy_handwrite_images(bg_image, img_file_list, test_mask_dir, test_image_dir, progress_bar)
+
+    random.seed(time.time())
 
     # 构建训练数据集
-    with tqdm(total=len(train_bg_file_list) * random_mask_size) as progress_bar:
-        for bgFile in train_bg_file_list:
-            random.seed(time.time())
-            img_slice = random.sample(img_file_list, random_mask_size)
-            copy_handwrite_images(bgFile, img_file_list, img_slice, train_mask_dir, train_image_dir, progress_bar)
+    with tqdm(total=len(train_bg_file_list)) as progress_bar:
+        for bg_image in train_bg_file_list:
+            copy_handwrite_images(bg_image, img_file_list, train_mask_dir, train_image_dir, progress_bar)
 
 
 snt = 0
@@ -269,6 +264,7 @@ def splitImageVertical(dir):
         imWrite(bottom_image_path, bottom_image)
 
 
+@jit
 def resizeAllImage(dir):
     if not os.path.exists(dir):
         print(dir, "not exist")
@@ -280,6 +276,8 @@ def resizeAllImage(dir):
         image = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
         if image is None:
             continue
+        if image.shape[1] < 1000 and image.shape[0] < 1000:
+            return
         w = int(image.shape[1] / 2)
         h = int(image.shape[0] / 2)
         image = cv2.resize(image, (w, h))
@@ -289,6 +287,6 @@ def resizeAllImage(dir):
 if __name__ == '__main__':
     # generate_old()
     generate_data('./casia', '/Users/nutstore/awork/datasets/handwriting/casia/HWDB2.2Train_images', 5)
-    resizeAllImage('./data')
+    # resizeAllImage('./casia')
     # splitImageVertical('./pdf2image')
     pass
