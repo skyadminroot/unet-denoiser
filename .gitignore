@@ -139,3 +139,5 @@ handwrite_data_background/
 pdf/
 .idea/
 casia/
+pdf2image-dev/
+.DS_Store
