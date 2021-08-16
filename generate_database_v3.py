@@ -196,7 +196,13 @@ def generate_data(bg_dir, img_dir):
         print("resource dir not exist")
         return
 
-    data_dir = "./data"
+    data_dir = "../dataset/data"
+
+    if os.path.exists(data_dir):
+        shutil.rmtree(data_dir)
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
 
     train_image_dir = data_dir + "/train/image"
     train_mask_dir = data_dir + "/train/mask"
