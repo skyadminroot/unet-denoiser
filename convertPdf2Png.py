@@ -6,9 +6,9 @@ import fitz
 from tqdm import tqdm
 
 
-def pdf_image(pdfPath, dest_path, zoom_x, zoom_y, rotation_angle):
+def pdf_image(pdf_path, dest_path, zoom_x, zoom_y, rotation_angle):
     # 打开PDF文件
-    pdf = fitz.open(pdfPath)
+    pdf = fitz.open(pdf_path)
     # 逐页读取PDF
     total_count = pdf.pageCount
     with tqdm(total=total_count) as progress_bar:

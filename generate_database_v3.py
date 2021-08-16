@@ -191,7 +191,7 @@ def generate_old():
     print("origin handwriting copy complete")
 
 
-def generate_data(bg_dir, img_dir, random_mask_size):
+def generate_data(bg_dir, img_dir):
     if not os.path.exists(bg_dir) or not os.path.exists(img_dir):
         print("resource dir not exist")
         return
@@ -209,10 +209,15 @@ def generate_data(bg_dir, img_dir, random_mask_size):
     # 所有手写图片集合
     img_file_list = readAllImageFiles(img_dir)
 
+    # 总数据集
+    total_count = len(bg_file_list)
+    # 测试数据集占20%
+    test_count = int(total_count * 0.2)
+
     # 测试用数据集
-    test_bg_file_list = bg_file_list[0:40]
+    test_bg_file_list = bg_file_list[0:test_count]
     # 训练用数据集
-    train_bg_file_list = bg_file_list[40:]
+    train_bg_file_list = bg_file_list[test_count:]
 
     if len(bg_file_list) == 0 or len(img_file_list) == 0:
         print("miss resource file")
@@ -242,6 +247,11 @@ def splitImageVertical(dir):
     for name in os.listdir(dir):
         if name == '.DS_Store':
             continue
+
+        if os.path.isdir(os.path.join(dir, name)):
+            splitImageVertical(os.path.join(dir, name))
+            continue
+
         file = os.path.join(dir, name)
         # 过滤掉目录
         if os.path.isdir(file):
@@ -264,29 +274,33 @@ def splitImageVertical(dir):
         imWrite(bottom_image_path, bottom_image)
 
 
-@jit
 def resizeAllImage(dir):
     if not os.path.exists(dir):
         print(dir, "not exist")
         return
     files = readAllImageFiles(dir)
-    for file in files:
-        if 'DS_Store' in file:
-            continue
-        image = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
-        if image is None:
-            continue
-        if image.shape[1] < 1000 and image.shape[0] < 1000:
-            return
-        w = int(image.shape[1] / 2)
-        h = int(image.shape[0] / 2)
-        image = cv2.resize(image, (w, h))
-        imWrite(file, image)
+    with tqdm(total=len(files)) as progress_bar:
+        for file in files:
+            if 'DS_Store' in file:
+                progress_bar.update(1)
+                continue
+            image = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+            if image is None:
+                progress_bar.update(1)
+                continue
+            if image.shape[1] < 1000 and image.shape[0] < 1000:
+                progress_bar.update(1)
+                continue
+            w = int(image.shape[1] / 2)
+            h = int(image.shape[0] / 2)
+            image = cv2.resize(image, (w, h))
+            imWrite(file, image)
+            progress_bar.update(1)
 
 
 if __name__ == '__main__':
     # generate_old()
-    generate_data('./casia', '/Users/nutstore/awork/datasets/handwriting/casia/HWDB2.2Train_images', 5)
+    generate_data('./casia', '/Users/nutstore/awork/datasets/handwriting/casia/HWDB2.2Train_images')
     # resizeAllImage('./casia')
-    # splitImageVertical('./pdf2image')
+    # splitImageVertical('./pdf2image-dev')
     pass
