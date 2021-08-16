@@ -74,7 +74,7 @@ def _get_batch(batch, ctx, is_even_split=True):
 
 def evaluate_accuracy(data_iter, net, ctx):
     if isinstance(ctx, mx.Context):
-        ctx = [ctx]    
+        ctx = [ctx]
     print('Evaluating accuracy')
     metric = SegmentationMetric(nclass=2)
     acc_sum, n = nd.array([0]), 0
@@ -112,7 +112,7 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
     # log.warning("Checkpoints : %s" % (checkpoints_dir))
     # log.info("lr_steps : {}".format(lr_steps))
     # define a summary writer that logs data and flushes to the file every 5 seconds
-    sw = SummaryWriter(logdir='./logs', flush_secs=5)
+    sw = SummaryWriter(logdir='./logs', flush_secs=5, verbose=False)
 
     # collect parameter names for logging the gradients of parameters in each epoch
     params = net.collect_params()
@@ -280,17 +280,17 @@ def parse_args():
                         help='the momentum of optimizer. (default: %(default)s))',
                         type=float,
                         default=0.99)
-    parser.add_argument('--batch-size', 
+    parser.add_argument('--batch-size',
                         dest='batch_size',
                         help='the batch size of model. (default: %(default)s)',
                         type=int,
                         default=2)
-    parser.add_argument('--num-epochs', 
+    parser.add_argument('--num-epochs',
                         dest='num_epochs',
                         help='the number of epochs to train model. (defalult: %(default)s)',
                         type=int,
                         default=5)
-    parser.add_argument('--num-classes', 
+    parser.add_argument('--num-classes',
                         dest='num_classes',
                         help='the classes of output. (default: %(default)s)',
                         type=int,
@@ -299,22 +299,22 @@ def parse_args():
                         help='the optimizer to optimize the weights of model. (default: %(default)s)',
                         type=str,
                         default='sgd')
-    parser.add_argument('--data-dir', 
+    parser.add_argument('--data-dir',
                         dest='data_dir',
                         help='the directory of datasets. (default: %(default)s)',
                         type=str,
                         default='data')
-    parser.add_argument('--log-dir', 
+    parser.add_argument('--log-dir',
                         dest='log_dir',
                         help="the directory of 'unet_log.txt'. (default: %(default)s)",
                         type=str,
                         default='./')
-    parser.add_argument('--checkpoints-dir', 
+    parser.add_argument('--checkpoints-dir',
                         dest='checkpoints_dir',
                         help='the directory of checkpoints. (default: %(default)s)',
                         type=str,
                         default='./checkpoints')
-    parser.add_argument('--is-even-split', 
+    parser.add_argument('--is-even-split',
                         dest='is_even_split',
                         help='whether or not to even split the data to all GPUs. (default: %(default)s)',
                         type=bool,
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     # random.seed = seed
     # np.random.seed = seed
     # mx.random.seed(seed)
-        
+
     args = parse_args()
     if args.gpu_id is None:
         ctx = [mx.cpu()]
@@ -400,7 +400,7 @@ if __name__ == '__main__':
     # Loss function test
     # loss = gloss.SoftmaxCrossEntropyLoss(axis=1)
     # Weight are calculated dynamatically
-    
+
     # loss = WeightedBCEDICE(axis = 1, weight = None)
     loss = FocalLoss(axis=1, num_class=2)
 
