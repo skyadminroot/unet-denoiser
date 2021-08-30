@@ -103,25 +103,30 @@ def simpleOverlayImage(bg_image, mask_image, offset_x, offset_y, width, height, 
             bg_image[offset_y + y, offset_x + x] = mask_image[y, x]
 
 
+def copy_handwrite_images_split(dir, image, index):
+    each_width = int(image.shape[1] / 4)
+    for i in range(4):
+        dest_path = os.path.join(dir, str(index) + ".png")
+        bitmap = image[:, i * each_width: (i + 1) * each_width]
+        imWrite(dest_path, bitmap)
+        index += 1
+
+
 def copy_handwrite_images(bg_image, all_img_list, dest_mask_dir, dest_image_dir, progress_bar):
     global mImageCount
     bg = cv2.imread(bg_image, cv2.IMREAD_GRAYSCALE)
 
-    mImageCount += 1
-    dest_mask_path = os.path.join(dest_mask_dir, str(mImageCount) + ".png")
-    dest_image_path = os.path.join(dest_image_dir, str(mImageCount) + ".png")
-
     # 合成多个遮盖图片
-    random_image = random.sample(all_img_list, 2)
+    random_image = random.sample(all_img_list, 1)
     mask_image = np.ones(bg.shape, bg.dtype) * 255
     for imgUrl in random_image:
         img = cv2.imread(imgUrl, cv2.IMREAD_GRAYSCALE)
-        rotate_image = rotate_bound(img, random.randint(-15, 15), random.uniform(0.3, 0.6))
+        rotate_image = rotate_bound(img, random.randint(-5, 5), random.uniform(0.3, 0.6))
         overlayImage(mask_image, rotate_image)
 
     bg_copy = bg.copy()
     start_x, start_y, width, height = overlayImage(bg_copy, mask_image)
-    imWrite(dest_image_path, bg_copy)
+    copy_handwrite_images_split(dest_image_dir, bg_copy, mImageCount)
 
     # resize mask_image
     # 此时mask_image尺寸必然小于bgp
@@ -133,9 +138,11 @@ def copy_handwrite_images(bg_image, all_img_list, dest_mask_dir, dest_image_dir,
     tmp_mask_image = cv2.threshold(mask_image, 128, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 
     simpleOverlayImage(target_mask, tmp_mask_image, start_x, start_y, width, height, False)
-    imWrite(dest_mask_path, target_mask)
+    copy_handwrite_images_split(dest_mask_dir, target_mask, mImageCount)
     if progress_bar is not None:
         progress_bar.update(1)
+
+    mImageCount += 4
 
 
 mImageCount = 0
@@ -267,17 +274,13 @@ def splitImageVertical(dir):
             print("can't read file: " + file)
             continue
         image_height = image.shape[0]
-        sub_image_height = int(image_height / 2)
-        top_image = image[0:sub_image_height, :]
-        bottom_image = image[sub_image_height:, :]
-
-        snt += 1
-        top_image_path = os.path.join("./casia", str(snt) + ".png")
-        imWrite(top_image_path, top_image)
-
-        snt += 1
-        bottom_image_path = os.path.join("./casia", str(snt) + ".png")
-        imWrite(bottom_image_path, bottom_image)
+        # 水平分成多份
+        each_height = int((int(image_height / 8)) / 2) * 2
+        for index in range(8):
+            snt += 1
+            img = image[index * each_height:(index + 1) * each_height, :]
+            image_path = os.path.join("./casia", str(snt) + ".png")
+            imWrite(image_path, img)
 
 
 def resizeAllImage(dir):

@@ -87,7 +87,7 @@ def recognize(network_parameters, image_path, ctx, debug):
     n_channels = 64
 
     img_height = 467
-    img_width = 679
+    img_width = 680
     # img_height = 96 
     # img_width = 576
 
@@ -222,7 +222,7 @@ def recoverImage(image, mask):
 if __name__ == '__main__':
     args = parse_args()
     args.network_param = './unet_best.params'
-    args.img_path = './data/train/image/16.png'
+    args.img_path = '../dataset/data/train/image/189.png'
     # args.img_path = '/home/gbugaj/devio/unet-denoiser/assets/snippets/snippet.png'
     # args.img_path = '/home/greg/dev/unet-denoiser/assets/cleaned-examples/field-set-01/07.png'    
     args.debug = False
