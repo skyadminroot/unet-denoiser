@@ -210,6 +210,9 @@ def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, log_dir='.
 
         val_acc = test_acc
         prefix = 'unet'
+        # 记录一下每次训练后的准确率
+        with open(prefix + '_train.log', 'a') as f:
+            f.write('{:04d}:\t{:.6f}\n'.format(epoch, val_acc))
         if val_acc > best_acc:
             best_acc = val_acc
             if best_epoch != -1:
